@@ -3,13 +3,13 @@
 
 :root {
   --bg: #0a0a0a;
-  --bg-elevated: #141414;
+  --bg-elevated: #111111;
   --bg-sunken: #050505;
-  --line: #2a2a2a;
-  --line-strong: #3d3d3d;
-  --fg: #f4f4f4;
-  --fg-muted: #a3a3a3;
-  --fg-faint: #6b6b6b;
+  --line: #1f1f1f;
+  --line-strong: #333333;
+  --fg: #f2f2f2;
+  --fg-muted: #9a9a9a;
+  --fg-faint: #5c5c5c;
   --accent: #c6ff3d;
   --accent-ink: #0a0a0a;
   --danger: #ff5c5c;
@@ -20,8 +20,7 @@
     'Noto Sans JP', 'Yu Gothic', 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --radius: 6px;
-  --radius-lg: 14px;
+  --radius: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -29,10 +28,10 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
-  --space-8: 72px;
-  --measure: 40rem;
+  --space-8: 80px;
+  --measure: 38rem;
   --page-max: 72rem;
-  --tap: 48px;
+  --tap: 44px;
 
   color-scheme: dark;
 }
@@ -55,8 +54,8 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: 'palt';
   overflow-x: hidden;
@@ -72,7 +71,7 @@ p {
 h1,
 h2,
 h3 {
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
@@ -93,6 +92,7 @@ button {
 a {
   color: var(--fg);
   text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
 }
 
 :focus {
@@ -100,9 +100,8 @@ a {
 }
 
 :focus-visible {
-  outline: 3px solid var(--focus);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
-  border-radius: var(--radius);
 }
 
 ::selection {
