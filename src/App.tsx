@@ -7,6 +7,9 @@ import { MaskList } from './components/MaskList';
 import { SubmissionForm } from './components/SubmissionForm';
 import { ExportPanel } from './components/ExportPanel';
 import { Footer } from './components/Footer';
+import { RequestPanel } from './components/RequestPanel';
+import { LinkBuilder } from './components/LinkBuilder';
+import { EMPTY_LINK, isRequestLink, parseRequestLink, type RequestLink } from './lib/link';
 import { initialMaskState, maskReducer } from './lib/masks';
 import { loadImageFromFile, loadSampleImage } from './lib/image';
 import { buildWatermarkText, todayIso } from './lib/watermark';
@@ -15,16 +18,32 @@ import { DEFAULT_PURPOSE, getPurposeRule } from './rules/purposeRules';
 
 export const SAMPLE_IMAGE_PATH = '/sample/sample-id.png';
 
-function initialDetails(): SubmissionDetails {
-  return { purpose: DEFAULT_PURPOSE, customPurpose: '', recipient: '', date: todayIso() };
+function initialDetails(link: RequestLink): SubmissionDetails {
+  return {
+    purpose: link.purpose ?? DEFAULT_PURPOSE,
+    customPurpose: link.customPurpose ?? '',
+    recipient: link.recipient ?? '',
+    date: todayIso(),
+  };
 }
 
+function readLink(): RequestLink {
+  return typeof window === 'undefined' ? EMPTY_LINK : parseRequestLink(window.location.hash);
+}
+
+type View = 'app' | 'business';
+
 export function App() {
+  // The request link (if any) is read once from the URL fragment. Fragments
+  // never reach the server, so a recipient's name stays on the device.
+  const [link, setLink] = useState<RequestLink>(readLink);
+  const [view, setView] = useState<View>(() => (link.view === 'business' ? 'business' : 'app'));
   const [image, setImage] = useState<LoadedImage | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [maskState, dispatch] = useReducer(maskReducer, initialMaskState);
-  const [details, setDetails] = useState<SubmissionDetails>(initialDetails);
+  const [details, setDetails] = useState<SubmissionDetails>(() => initialDetails(link));
   const [warningAcknowledged, setWarningAcknowledged] = useState(false);
+  const hasRequest = isRequestLink(link);
 
   const watermark = useMemo(() => buildWatermarkText(details), [details]);
   const rule = getPurposeRule(details.purpose);
@@ -64,6 +83,26 @@ export function App() {
     dispatch({ type: 'add', rect, source });
   }, []);
 
+  const dismissRequest = useCallback(() => {
+    setLink(EMPTY_LINK);
+    setDetails(initialDetails(EMPTY_LINK));
+    if (typeof window !== 'undefined' && window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  const openBusiness = useCallback(() => {
+    setView('business');
+    window.history.replaceState(null, '', '#view=business');
+    window.scrollTo(0, 0);
+  }, []);
+
+  const closeBusiness = useCallback(() => {
+    setView('app');
+    window.history.replaceState(null, '', window.location.pathname);
+    window.scrollTo(0, 0);
+  }, []);
+
   const changeDetails = useCallback(
     (next: SubmissionDetails) => {
       // Reset the acknowledgement whenever the purpose changes.
@@ -72,6 +111,26 @@ export function App() {
     },
     [details.purpose],
   );
+
+  // Links opened while the page is already loaded only change the fragment;
+  // pick those up as well so a pasted request link always takes effect.
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = parseRequestLink(window.location.hash);
+      if (next.view === 'business') {
+        setView('business');
+        return;
+      }
+      setView('app');
+      if (isRequestLink(next)) {
+        setLink(next);
+        setDetails(initialDetails(next));
+        setWarningAcknowledged(false);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   useEffect(() => {
     if (!image) return;
@@ -87,18 +146,32 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [image]);
 
+  if (view === 'business') {
+    return (
+      <div className="app">
+        <Header />
+        <main id="main" className="main">
+          <LinkBuilder origin={window.location.origin} onBack={closeBusiness} />
+        </main>
+        <Footer onOpenBusiness={openBusiness} />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Header />
       <main id="main" className="main">
         {!image ? (
           <>
+            {hasRequest ? <RequestPanel link={link} onDismiss={dismissRequest} /> : null}
             <Hero onFile={openFile} onSample={openSample} error={loadError} />
             <PrivacyNotice variant="full" />
           </>
         ) : (
           <div className="workspace">
             <PrivacyNotice variant="compact" />
+            {hasRequest ? <RequestPanel link={link} onDismiss={dismissRequest} /> : null}
 
             <section className="step" aria-labelledby="step-mask">
               <div className="step__head">
@@ -150,7 +223,7 @@ export function App() {
           </div>
         )}
       </main>
-      <Footer />
+      <Footer onOpenBusiness={openBusiness} />
     </div>
   );
 }

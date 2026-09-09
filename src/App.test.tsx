@@ -147,6 +147,36 @@ describe('App', () => {
     expect(fileName).toMatch(/^kakko-Sakura_Guest_House-.*\.png$/);
   });
 
+  it('pre-fills from a request link and shows the request', async () => {
+    window.location.hash = '#purpose=rental&to=ABC%20%E4%B8%8D%E5%8B%95%E7%94%A3&keep=photo,name,address';
+    try {
+      await openSample();
+      expect(screen.getByText('提出先からの依頼リンクで開いています')).toBeTruthy();
+      expect((screen.getByLabelText('提出先') as HTMLInputElement).value).toBe('ABC 不動産');
+      expect((screen.getByLabelText('賃貸') as HTMLInputElement).checked).toBe(true);
+      const keep = screen.getByRole('list', { name: '残す項目' });
+      expect(within(keep).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['顔写真', '氏名', '住所']);
+      expect(screen.getByText(/^ABC 不動産 \/ 賃貸契約本人確認専用 \/ \d{4}-\d{2}-\d{2}$/)).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: '依頼内容を使わない' }));
+      expect(screen.queryByText('提出先からの依頼リンクで開いています')).toBeNull();
+      expect((screen.getByLabelText('提出先') as HTMLInputElement).value).toBe('');
+    } finally {
+      window.location.hash = '';
+    }
+  });
+
+  it('opens the link builder for businesses and generates a fragment link', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '事業者の方へ: 依頼リンクを作る' }));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('受け取る。');
+    fireEvent.change(screen.getByLabelText('あなたの事業者名・施設名'), { target: { value: 'Sakura Guest House' } });
+    const code = document.querySelector('.code')?.textContent ?? '';
+    expect(code).toContain('/#purpose=lodging&to=Sakura+Guest+House&keep=photo%2Cname');
+    fireEvent.click(screen.getByRole('button', { name: /KAKKO に戻る/ }));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('必要な情報だけ、見せる。');
+  });
+
   it('discards the image and returns to the start screen', async () => {
     await openSample();
     fireEvent.click(screen.getByRole('button', { name: /別の画像を選ぶ/ }));

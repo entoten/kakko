@@ -2,7 +2,11 @@ import { PRIVACY_STATEMENT, PRIVACY_TECHNICAL } from './PrivacyNotice';
 
 export const REPOSITORY_URL = 'https://github.com/entoten/kakko';
 
-export function Footer() {
+interface FooterProps {
+  onOpenBusiness: () => void;
+}
+
+export function Footer({ onOpenBusiness }: FooterProps) {
   return (
     <footer className="footer">
       <div className="footer__inner">
@@ -13,6 +17,10 @@ export function Footer() {
           は法的助言を提供するものではありません。どの項目を隠してよいか、提出が必要かどうかは、提出先の案内や公的な情報を確認のうえご自身で判断してください。
         </p>
         <p className="footer__links">
+          <button type="button" className="link-button" onClick={onOpenBusiness}>
+            事業者の方へ: 依頼リンクを作る
+          </button>
+          <span aria-hidden="true"> ・ </span>
           <a href={REPOSITORY_URL} rel="noopener noreferrer">
             ソースコード（GitHub）
           </a>

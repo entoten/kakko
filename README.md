@@ -36,6 +36,29 @@ KAKKO は次の 2 つで、そのリスクを小さくします。
 
 ---
 
+## 事業者の方へ: 依頼リンク
+
+身分証の提出を求める側（民泊ホスト、不動産会社、買取業者など）は、**依頼リンク**を渡すだけで KAKKO を自分のフローに組み込めます。登録も API も不要で、リンクはただの文字列です。
+
+```html
+<a href="https://<KAKKO の公開URL>/#purpose=lodging&to=Sakura%20Guest%20House&keep=photo,name">
+  KAKKO で安全なコピーを作る
+</a>
+```
+
+| パラメータ | 内容 |
+| --- | --- |
+| `purpose` | `lodging` / `job` / `rental` / `resale` / `other` |
+| `to` | 提出先名（ウォーターマークに刻まれます、60 文字まで） |
+| `keep` | 見えている必要がある項目。`photo,name,birthdate,address,number,expiry,domicile,issuer,nationality` から選択 |
+| `custom` | `purpose=other` のときの用途名（40 文字まで） |
+
+リンクで開くと、KAKKO は「相手が必要としている項目」と「それ以外は隠して構いません」を表示し、提出先と用途を入力済みにします。**何を隠すかを決めるのは常に提出者本人**で、リンクは相手の希望を伝えるだけです。
+
+パラメータはすべて URL の**フラグメント（`#` 以降）**に載せています。フラグメントはブラウザがサーバーへ送らないため、提出先名がアクセスログに残ることもありません。画像は提出者の端末から事業者へ直接渡り、KAKKO を経由しません。
+
+アプリのフッター「事業者の方へ: 依頼リンクを作る」（`#view=business`）から、リンクを対話的に生成できます。
+
 ## プライバシー設計
 
 | 設計 | 実装 |
@@ -85,18 +108,21 @@ form-action 'none'; base-uri 'none'; upgrade-insecure-requests
 src/
   App.tsx                 画面全体の状態（画像・マスク・入力）
   components/             Header / Hero / PrivacyNotice / MaskCanvas / MaskList /
-                          SubmissionForm / ExportPanel / Footer
+                          SubmissionForm / ExportPanel / Footer /
+                          RequestPanel（依頼リンクの表示）/ LinkBuilder（事業者向け）
   lib/
     types.ts              ドメイン型（正規化座標のマスクなど）
     geometry.ts           矩形の正規化・ピクセル変換
     masks.ts              マスク状態の reducer（追加 / Undo / Redo / 削除）
     watermark.ts          ウォーターマーク文字列の生成・入力のサニタイズ
+    link.ts               依頼リンク（URL フラグメント）の解析・生成
     render.ts             Canvas 描画パイプライン（画像 → 黒塗り → 透かし）
     image.ts              ファイルのブラウザ内デコード
     export.ts             新規 Canvas からの PNG / JPEG 生成、保存・共有
     security.test.ts      プライバシー不変条件のテスト
   rules/
     purposeRules.ts       提出目的ごとのデータ（ラベル・透かし文言・警告・将来のヒント）
+    fields.ts             身分証の項目カタログ（依頼リンクの keep で使用）
 scripts/csp.ts            CSP の単一ソース
 public/_headers           Cloudflare 用レスポンスヘッダー
 public/sample/            架空のサンプル画像（大きく SAMPLE と表示）
