@@ -1,0 +1,30 @@
+/**
+ * Cloudflare Workers Static Assets configuration for KAKKO.
+ *
+ * There is intentionally NO `main` (Worker script): the deployment is
+ * static HTML/CSS/JS only. No server-side code can receive an image
+ * because no server-side code exists.
+ *
+ * Response headers (CSP etc.) are defined in `public/_headers` and are
+ * copied into `dist/_headers` by Vite at build time.
+ *
+ * Deploy: `npm run deploy` (requires `wrangler login`; no secrets are stored
+ * in this repository).
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kakko",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    // Return a plain 404 for unknown paths. KAKKO is a single page and does
+    // not need SPA-style fallbacks.
+    "not_found_handling": "none",
+    "html_handling": "auto-trailing-slash"
+  },
+  // Cloudflare's own request analytics (no client-side script) stays off so
+  // that nothing is injected into the page.
+  "observability": {
+    "enabled": false
+  }
+}

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" font-family="'Hiragino Sans','Noto Sans JP',Helvetica,Arial,sans-serif">
+  <!--
+    KAKKO fictional sample document.
+    This is NOT a real identity document and does not reproduce any real
+    government design. Every value is invented for demo purposes only.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e9eef2"/>
+      <stop offset="1" stop-color="#d5dde5"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#c4ccd4" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="760" rx="36" fill="url(#bg)"/>
+  <rect width="1200" height="760" rx="36" fill="url(#grid)" opacity="0.6"/>
+  <rect x="18" y="18" width="1164" height="724" rx="28" fill="none" stroke="#9aa5b1" stroke-width="3"/>
+
+  <!-- header -->
+  <rect x="48" y="48" width="1104" height="72" rx="12" fill="#1f2a37"/>
+  <text x="76" y="97" font-size="34" font-weight="700" fill="#ffffff">架空本人確認カード（デモ用）</text>
+  <text x="1124" y="97" font-size="26" font-weight="700" fill="#c6ff3d" text-anchor="end">FICTIONAL ID · DEMO ONLY</text>
+
+  <!-- photo placeholder -->
+  <rect x="72" y="160" width="260" height="330" rx="14" fill="#fbfcfd" stroke="#9aa5b1" stroke-width="3"/>
+  <circle cx="202" cy="285" r="62" fill="#c9d2db"/>
+  <path d="M100 470c10-70 60-105 102-105s92 35 102 105z" fill="#c9d2db"/>
+  <text x="202" y="512" font-size="20" fill="#5b6773" text-anchor="middle">写真（架空）</text>
+
+  <!-- fields -->
+  <g font-size="22" fill="#5b6773">
+    <text x="380" y="190">氏名</text>
+    <text x="380" y="270">生年月日</text>
+    <text x="380" y="350">住所</text>
+    <text x="380" y="430">番号</text>
+    <text x="380" y="510">有効期限</text>
+    <text x="380" y="590">交付</text>
+  </g>
+  <g font-size="34" font-weight="700" fill="#1f2a37">
+    <text x="380" y="230">架空 太郎</text>
+    <text x="380" y="310">2000年01月01日</text>
+    <text x="380" y="390">架空県サンプル市デモ町1-2-3 カッコハイツ 000号</text>
+    <text x="380" y="470" font-family="ui-monospace,Menlo,monospace">SAMPLE-0000-0000-0000</text>
+    <text x="380" y="550">2030年12月31日まで有効（架空）</text>
+    <text x="380" y="630">架空県公安委員会（架空）</text>
+  </g>
+
+  <!-- fake signature strip -->
+  <rect x="72" y="540" width="260" height="120" rx="12" fill="#ffffff" stroke="#9aa5b1" stroke-width="3"/>
+  <text x="202" y="590" font-size="22" fill="#5b6773" text-anchor="middle">条件等</text>
+  <text x="202" y="628" font-size="22" fill="#1f2a37" text-anchor="middle">なし（架空）</text>
+
+  <!-- footer -->
+  <text x="72" y="716" font-size="20" fill="#5b6773">このカードは実在しません。KAKKO の動作確認用に作成した架空データです。</text>
+
+  <!-- big SAMPLE overlay -->
+  <g transform="rotate(-18 600 380)">
+    <rect x="200" y="290" width="800" height="180" rx="24" fill="#ff3b3b" fill-opacity="0.12" stroke="#ff3b3b" stroke-opacity="0.85" stroke-width="10"/>
+    <text x="600" y="435" font-size="160" font-weight="900" fill="#ff3b3b" fill-opacity="0.85" text-anchor="middle" letter-spacing="14">SAMPLE</text>
+  </g>
+</svg>

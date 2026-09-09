@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.wrangler/
+.vite/
+
+# secrets / local config — never commit these
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+
+# test / coverage
+coverage/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# real-world images must never be committed (see CONTRIBUTING.md)
+# only public/sample/ contains fictional sample assets
+*.jpg
+*.jpeg
+*.heic
+*.heif
+!public/sample/*.png
+!public/sample/*.svg
