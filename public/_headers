@@ -1,0 +1,18 @@
+# Cloudflare Workers Static Assets response headers.
+# Keep the Content-Security-Policy line in sync with scripts/csp.ts
+# (verified by src/lib/security.test.ts).
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; worker-src 'none'; child-src 'none'; frame-src 'none'; manifest-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/sample/*
+  Cache-Control: public, max-age=86400
