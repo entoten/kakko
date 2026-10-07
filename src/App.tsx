@@ -10,6 +10,7 @@ import { Footer } from './components/Footer';
 import { RequestPanel } from './components/RequestPanel';
 import { LinkBuilder } from './components/LinkBuilder';
 import { DeletionRequest } from './components/DeletionRequest';
+import { PresentMode } from './components/PresentMode';
 import { EMPTY_LINK, isRequestLink, parseRequestLink, type RequestLink } from './lib/link';
 import { initialMaskState, maskReducer } from './lib/masks';
 import { loadImageFromFile, loadSampleImage } from './lib/image';
@@ -44,6 +45,7 @@ export function App() {
   const [maskState, dispatch] = useReducer(maskReducer, initialMaskState);
   const [details, setDetails] = useState<SubmissionDetails>(() => initialDetails(link));
   const [warningAcknowledged, setWarningAcknowledged] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const hasRequest = isRequestLink(link);
 
   const watermark = useMemo(() => buildWatermarkText(details), [details]);
@@ -72,9 +74,12 @@ export function App() {
     }
   }, []);
 
+  const closePresent = useCallback(() => setPresenting(false), []);
+
   const reset = useCallback(() => {
     // Dropping the reference is all that is needed: the bitmap only ever
     // lived in memory, so nothing else has to be cleaned up.
+    setPresenting(false);
     setImage(null);
     dispatch({ type: 'clear' });
     setWarningAcknowledged(false);
@@ -226,11 +231,15 @@ export function App() {
                 watermark={watermark}
                 blocked={needsAcknowledgement ? '上の注意を確認してからコピーを作成できます。' : null}
                 onReset={reset}
+                onPresent={() => setPresenting(true)}
               />
             </section>
           </div>
         )}
       </main>
+      {image && presenting ? (
+        <PresentMode image={image} masks={maskState.masks} details={details} onClose={closePresent} />
+      ) : null}
       <Footer onOpenBusiness={openBusiness} onOpenDeletion={openDeletion} />
     </div>
   );

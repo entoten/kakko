@@ -191,6 +191,23 @@ describe('App', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('必要な情報だけ、見せる。');
   });
 
+  it('opens present mode without creating a file, reveals on tap and closes', async () => {
+    await openSample();
+    fireEvent.change(screen.getByLabelText('提出先'), { target: { value: 'Sakura Guest House' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ファイルを作らずに画面で見せる' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/ファイルは生成されていません/)).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Sakura Guest House');
+    expect(downloadSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'タップして表示' }));
+    expect(within(dialog).getByRole('img', { name: /提示中の書類/ })).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '提示を終了' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('discards the image and returns to the start screen', async () => {
     await openSample();
     fireEvent.click(screen.getByRole('button', { name: /別の画像を選ぶ/ }));

@@ -9,6 +9,8 @@ interface ExportPanelProps {
   /** When set, export is disabled and this message explains why. */
   blocked: string | null;
   onReset: () => void;
+  /** Open present mode (show on screen, no file). */
+  onPresent: () => void;
 }
 
 interface Generated extends ExportResult {
@@ -25,7 +27,7 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function ExportPanel({ image, masks, watermark, blocked, onReset }: ExportPanelProps) {
+export function ExportPanel({ image, masks, watermark, blocked, onReset, onPresent }: ExportPanelProps) {
   const id = useId();
   const [format, setFormat] = useState<ExportFormat>('image/png');
   const [busy, setBusy] = useState(false);
@@ -146,6 +148,15 @@ export function ExportPanel({ image, masks, watermark, blocked, onReset }: Expor
       <button type="button" className="btn btn--primary btn--xl btn--block" onClick={generate} disabled={disabled}>
         {busy ? '生成中…' : '安全なコピーを作成'}
       </button>
+
+      <div className="present-entry">
+        <button type="button" className="btn btn--ghost btn--block" onClick={onPresent} disabled={Boolean(blocked)}>
+          ファイルを作らずに画面で見せる
+        </button>
+        <p className="field__help">
+          対面やビデオ通話なら、送る必要はありません。秒単位の時刻入りの透かしで画面に表示します（提示モード）。
+        </p>
+      </div>
 
       <p className="status" role="status" aria-live="polite">
         {result ? message : null}
