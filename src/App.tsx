@@ -9,6 +9,7 @@ import { ExportPanel } from './components/ExportPanel';
 import { Footer } from './components/Footer';
 import { RequestPanel } from './components/RequestPanel';
 import { LinkBuilder } from './components/LinkBuilder';
+import { DeletionRequest } from './components/DeletionRequest';
 import { EMPTY_LINK, isRequestLink, parseRequestLink, type RequestLink } from './lib/link';
 import { initialMaskState, maskReducer } from './lib/masks';
 import { loadImageFromFile, loadSampleImage } from './lib/image';
@@ -31,13 +32,13 @@ function readLink(): RequestLink {
   return typeof window === 'undefined' ? EMPTY_LINK : parseRequestLink(window.location.hash);
 }
 
-type View = 'app' | 'business';
+type View = 'app' | 'business' | 'delete';
 
 export function App() {
   // The request link (if any) is read once from the URL fragment. Fragments
   // never reach the server, so a recipient's name stays on the device.
   const [link, setLink] = useState<RequestLink>(readLink);
-  const [view, setView] = useState<View>(() => (link.view === 'business' ? 'business' : 'app'));
+  const [view, setView] = useState<View>(() => link.view ?? 'app');
   const [image, setImage] = useState<LoadedImage | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [maskState, dispatch] = useReducer(maskReducer, initialMaskState);
@@ -91,13 +92,16 @@ export function App() {
     }
   }, []);
 
-  const openBusiness = useCallback(() => {
-    setView('business');
-    window.history.replaceState(null, '', '#view=business');
+  const openView = useCallback((next: Exclude<View, 'app'>) => {
+    setView(next);
+    window.history.replaceState(null, '', `#view=${next}`);
     window.scrollTo(0, 0);
   }, []);
 
-  const closeBusiness = useCallback(() => {
+  const openBusiness = useCallback(() => openView('business'), [openView]);
+  const openDeletion = useCallback(() => openView('delete'), [openView]);
+
+  const closeView = useCallback(() => {
     setView('app');
     window.history.replaceState(null, '', window.location.pathname);
     window.scrollTo(0, 0);
@@ -117,8 +121,8 @@ export function App() {
   useEffect(() => {
     const onHashChange = () => {
       const next = parseRequestLink(window.location.hash);
-      if (next.view === 'business') {
-        setView('business');
+      if (next.view) {
+        setView(next.view);
         return;
       }
       setView('app');
@@ -146,14 +150,18 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [image]);
 
-  if (view === 'business') {
+  if (view !== 'app') {
     return (
       <div className="app">
         <Header />
         <main id="main" className="main">
-          <LinkBuilder origin={window.location.origin} onBack={closeBusiness} />
+          {view === 'business' ? (
+            <LinkBuilder origin={window.location.origin} onBack={closeView} />
+          ) : (
+            <DeletionRequest onBack={closeView} />
+          )}
         </main>
-        <Footer onOpenBusiness={openBusiness} />
+        <Footer onOpenBusiness={openBusiness} onOpenDeletion={openDeletion} />
       </div>
     );
   }
@@ -165,7 +173,7 @@ export function App() {
         {!image ? (
           <>
             {hasRequest ? <RequestPanel link={link} onDismiss={dismissRequest} /> : null}
-            <Hero onFile={openFile} onSample={openSample} error={loadError} />
+            <Hero onFile={openFile} onSample={openSample} onOpenDeletion={openDeletion} error={loadError} />
             <PrivacyNotice variant="full" />
           </>
         ) : (
@@ -223,7 +231,7 @@ export function App() {
           </div>
         )}
       </main>
-      <Footer onOpenBusiness={openBusiness} />
+      <Footer onOpenBusiness={openBusiness} onOpenDeletion={openDeletion} />
     </div>
   );
 }
