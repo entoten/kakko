@@ -178,6 +178,8 @@ npx wrangler login        # ブラウザで Cloudflare にログイン（トー�
 npm run deploy            # build → wrangler deploy
 ```
 
+初回はアカウントの workers.dev サブドメインの登録を求められます。`kakko` を選ぶと、Worker 名が `app` なので公開 URL は `https://app.kakko.workers.dev` になります。
+
 `wrangler.jsonc` は静的アセットのみを指定しています。**`main`（Worker スクリプト）や R2 / D1 / KV / AI などのバインディングを追加しないでください。** それはこのプロジェクトの最重要原則を壊します（テストが失敗します）。
 
 環境変数・シークレットは不要です。そのため `.env.example` も置いていません。将来必要になった場合も、秘密値は `.dev.vars` や Cloudflare のダッシュボードにだけ置き、Git には含めないでください。
