@@ -3,10 +3,11 @@ import { useId, useRef } from 'react';
 interface HeroProps {
   onFile: (file: File) => void;
   onSample: () => void;
+  onOpenDeletion: () => void;
   error: string | null;
 }
 
-export function Hero({ onFile, onSample, error }: HeroProps) {
+export function Hero({ onFile, onSample, onOpenDeletion, error }: HeroProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +47,14 @@ export function Hero({ onFile, onSample, error }: HeroProps) {
           {error}
         </p>
       ) : null}
+
+      <p className="hero__aside">
+        すでに預けてしまった画像が心配な方は、
+        <button type="button" className="link-button" onClick={onOpenDeletion}>
+          事業者への削除請求文を作る
+        </button>
+        こともできます。
+      </p>
 
       <ol className="hero__steps" aria-label="使い方">
         <li>

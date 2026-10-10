@@ -4,9 +4,10 @@ export const REPOSITORY_URL = 'https://github.com/entoten/kakko';
 
 interface FooterProps {
   onOpenBusiness: () => void;
+  onOpenDeletion: () => void;
 }
 
-export function Footer({ onOpenBusiness }: FooterProps) {
+export function Footer({ onOpenBusiness, onOpenDeletion }: FooterProps) {
   return (
     <footer className="footer">
       <div className="footer__inner">
@@ -17,6 +18,10 @@ export function Footer({ onOpenBusiness }: FooterProps) {
           は法的助言を提供するものではありません。どの項目を隠してよいか、提出が必要かどうかは、提出先の案内や公的な情報を確認のうえご自身で判断してください。
         </p>
         <p className="footer__links">
+          <button type="button" className="link-button" onClick={onOpenDeletion}>
+            預けた画像の削除を請求する
+          </button>
+          <span aria-hidden="true"> ・ </span>
           <button type="button" className="link-button" onClick={onOpenBusiness}>
             事業者の方へ: 依頼リンクを作る
           </button>

@@ -21,7 +21,7 @@ export interface RequestLink {
   recipient?: string;
   /** Fields the recipient says they need to see. Advisory only. */
   keep: FieldId[];
-  view?: 'business';
+  view?: 'business' | 'delete';
 }
 
 export const EMPTY_LINK: RequestLink = { keep: [] };
@@ -55,7 +55,8 @@ export function parseRequestLink(hash: string): RequestLink {
     .filter(isFieldId);
   link.keep = [...new Set(keep)];
 
-  if (params.get('view') === 'business') link.view = 'business';
+  const view = params.get('view');
+  if (view === 'business' || view === 'delete') link.view = view;
 
   return link;
 }
