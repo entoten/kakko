@@ -198,6 +198,23 @@ npm run dev          # http://127.0.0.1:5173
 
 ## Cloudflare へのデプロイ
 
+公開 URL: https://app.kakko.workers.dev
+
+### 自動デプロイ（通常はこちら）
+
+本番 Worker `app` は Cloudflare の Git 連携（Workers Builds）でこのリポジトリに接続されています。**`main` に push（= PR のマージ）すると自動でビルド・デプロイ**されます。
+
+| 項目 | 値 |
+| --- | --- |
+| Production branch | `main` |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Node | `.nvmrc` |
+
+ビルドの結果はコミットのチェック（Cloudflare Workers and Pages）と Cloudflare ダッシュボードの Deployments に出ます。Cloudflare の API トークンは Cloudflare 側にだけあり、GitHub（Secrets を含む）には置いていません。
+
+### 手動デプロイ
+
 ```bash
 npx wrangler login        # ブラウザで Cloudflare にログイン（トークンはリポジトリに保存されません）
 npm run deploy            # build → wrangler deploy
