@@ -1,5 +1,6 @@
 import type { SubmissionDetails } from './types';
 import { getPurposeRule } from '../rules/purposeRules';
+import { isRetainDays, retentionWatermark } from './retention';
 
 export const WATERMARK_SEPARATOR = ' / ';
 
@@ -24,11 +25,13 @@ export function purposeLabelFor(details: Pick<SubmissionDetails, 'purpose' | 'cu
 
 /**
  * Build the watermark string, e.g.
- * "Sakura Guest House / 宿泊本人確認専用 / 2026-09-09".
+ * "Sakura Guest House / 宿泊本人確認専用 / 2026-09-09 / 2026-09-16までに削除".
  * Empty parts are omitted so the output never contains " /  / ".
  */
 export function buildWatermarkText(details: SubmissionDetails): string {
-  const parts = [sanitizeText(details.recipient), purposeLabelFor(details), sanitizeText(details.date, 10)];
+  const date = sanitizeText(details.date, 10);
+  const parts = [sanitizeText(details.recipient), purposeLabelFor(details), date];
+  if (isRetainDays(details.retainDays)) parts.push(retentionWatermark(details.retainDays, date));
   return parts.filter((p) => p.length > 0).join(WATERMARK_SEPARATOR);
 }
 

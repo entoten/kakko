@@ -9,8 +9,10 @@ import { ExportPanel } from './components/ExportPanel';
 import { Footer } from './components/Footer';
 import { RequestPanel } from './components/RequestPanel';
 import { LinkBuilder } from './components/LinkBuilder';
-import { DeletionRequest } from './components/DeletionRequest';
+import { DeletionRequest, type DeletionPrefill } from './components/DeletionRequest';
 import { PresentMode } from './components/PresentMode';
+import { CheckView } from './components/CheckView';
+import { parsePayload, type Payload } from './verify/payload';
 import { EMPTY_LINK, isRequestLink, parseRequestLink, type RequestLink } from './lib/link';
 import { initialMaskState, maskReducer } from './lib/masks';
 import { loadImageFromFile, loadSampleImage } from './lib/image';
@@ -26,26 +28,38 @@ function initialDetails(link: RequestLink): SubmissionDetails {
     customPurpose: link.customPurpose ?? '',
     recipient: link.recipient ?? '',
     date: todayIso(),
+    retainDays: link.retain ?? null,
   };
+}
+
+function looksLikeEmail(value: string | undefined): value is string {
+  return value !== undefined && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function readLink(): RequestLink {
   return typeof window === 'undefined' ? EMPTY_LINK : parseRequestLink(window.location.hash);
 }
 
-type View = 'app' | 'business' | 'delete';
+type View = 'app' | 'business' | 'delete' | 'check';
+
+function readScanned(): Payload | null {
+  return typeof window === 'undefined' ? null : parsePayload(window.location.hash);
+}
 
 export function App() {
   // The request link (if any) is read once from the URL fragment. Fragments
   // never reach the server, so a recipient's name stays on the device.
-  const [link, setLink] = useState<RequestLink>(readLink);
-  const [view, setView] = useState<View>(() => link.view ?? 'app');
+  // A scanned QR code opens KAKKO with the payload in the fragment; show it.
+  const [scanned, setScanned] = useState<Payload | null>(readScanned);
+  const [link, setLink] = useState<RequestLink>(() => (scanned ? EMPTY_LINK : readLink()));
+  const [view, setView] = useState<View>(() => (scanned ? 'check' : (link.view ?? 'app')));
   const [image, setImage] = useState<LoadedImage | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [maskState, dispatch] = useReducer(maskReducer, initialMaskState);
   const [details, setDetails] = useState<SubmissionDetails>(() => initialDetails(link));
   const [warningAcknowledged, setWarningAcknowledged] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [deletionPrefill, setDeletionPrefill] = useState<DeletionPrefill | undefined>(undefined);
   const hasRequest = isRequestLink(link);
 
   const watermark = useMemo(() => buildWatermarkText(details), [details]);
@@ -104,7 +118,23 @@ export function App() {
   }, []);
 
   const openBusiness = useCallback(() => openView('business'), [openView]);
-  const openDeletion = useCallback(() => openView('delete'), [openView]);
+  const openCheck = useCallback(() => {
+    setScanned(null);
+    openView('check');
+  }, [openView]);
+  const openDeletion = useCallback(() => {
+    setDeletionPrefill(undefined);
+    openView('delete');
+  }, [openView]);
+
+  // From the receipt: the deletion request starts with this recipient filled in.
+  const openDeletionForRecipient = useCallback(() => {
+    setDeletionPrefill({
+      company: details.recipient.trim() || undefined,
+      email: looksLikeEmail(link.contact) ? link.contact : undefined,
+    });
+    openView('delete');
+  }, [details.recipient, link.contact, openView]);
 
   const closeView = useCallback(() => {
     setView('app');
@@ -125,6 +155,12 @@ export function App() {
   // pick those up as well so a pasted request link always takes effect.
   useEffect(() => {
     const onHashChange = () => {
+      const payload = parsePayload(window.location.hash);
+      if (payload) {
+        setScanned(payload);
+        setView('check');
+        return;
+      }
       const next = parseRequestLink(window.location.hash);
       if (next.view) {
         setView(next.view);
@@ -161,9 +197,11 @@ export function App() {
         <Header />
         <main id="main" className="main">
           {view === 'business' ? (
-            <LinkBuilder origin={window.location.origin} onBack={closeView} />
+            <LinkBuilder origin={window.location.origin} onBack={closeView} onOpenCheck={openCheck} />
+          ) : view === 'check' ? (
+            <CheckView scanned={scanned} onBack={closeView} onOpenBusiness={openBusiness} />
           ) : (
-            <DeletionRequest onBack={closeView} />
+            <DeletionRequest key={deletionPrefill?.company ?? ''} onBack={closeView} initial={deletionPrefill} />
           )}
         </main>
         <Footer onOpenBusiness={openBusiness} onOpenDeletion={openDeletion} />
@@ -232,6 +270,9 @@ export function App() {
                 blocked={needsAcknowledgement ? '上の注意を確認してからコピーを作成できます。' : null}
                 onReset={reset}
                 onPresent={() => setPresenting(true)}
+                details={details}
+                link={link}
+                onDeletionRequest={openDeletionForRecipient}
               />
             </section>
           </div>

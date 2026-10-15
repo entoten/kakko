@@ -166,13 +166,78 @@ describe('App', () => {
     }
   });
 
+  it('takes the retention promise from a request link, stamps it into the watermark and the receipt', async () => {
+    window.location.hash = '#purpose=lodging&to=Sakura%20Guest%20House&keep=photo,name&retain=7&contact=privacy%40example.jp';
+    try {
+      const canvas = await openSample();
+      expect(screen.getByText(/7日以内に削除と宣言しています/)).toBeTruthy();
+      expect(screen.getByText('privacy@example.jp')).toBeTruthy();
+      expect((screen.getByLabelText('7日以内に削除') as HTMLInputElement).checked).toBe(true);
+
+      fireEvent.change(screen.getByLabelText('日付'), { target: { value: '2026-09-09' } });
+      expect(screen.getByText('Sakura Guest House / 宿泊本人確認専用 / 2026-09-09 / 2026-09-16までに削除')).toBeTruthy();
+
+      // The user can still drop the condition.
+      fireEvent.click(screen.getByLabelText('指定なし'));
+      expect(screen.getByText('Sakura Guest House / 宿泊本人確認専用 / 2026-09-09')).toBeTruthy();
+      fireEvent.click(screen.getByLabelText('7日以内に削除'));
+
+      drag(canvas, [60, 40], [300, 120]);
+      fireEvent.click(screen.getByRole('button', { name: '安全なコピーを作成' }));
+      const receipt = (await screen.findByLabelText('確認レシート')).textContent ?? '';
+      expect(receipt).toContain('KAKKO 確認レシート');
+      expect(receipt).toContain('削除期限（提出条件）: 2026-09-16（7日以内に削除）');
+      expect(receipt).toContain('黒塗り: 1 か所');
+      expect(receipt).toContain('削除の窓口: privacy@example.jp');
+      expect(receipt).toMatch(/照合番号: [A-Z2-9]{8}/);
+
+      fireEvent.click(screen.getByRole('button', { name: 'テキストで保存' }));
+      await waitFor(() => expect(downloadSpy).toHaveBeenCalledTimes(1));
+      expect(downloadSpy.mock.calls[0]?.[1]).toBe('kakko-receipt.txt');
+
+      // From the receipt straight into a deletion request for this recipient.
+      fireEvent.click(screen.getByRole('button', { name: '削除請求文を用意する' }));
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('消してもらう。');
+      expect((screen.getByLabelText('宛先の事業者名') as HTMLInputElement).value).toBe('Sakura Guest House');
+      expect((screen.getByLabelText('事業者の問い合わせ先メール（任意）') as HTMLInputElement).value).toBe('privacy@example.jp');
+      expect(screen.getByLabelText('生成された請求文').textContent).toContain('Sakura Guest House 御中');
+    } finally {
+      window.location.hash = '';
+    }
+  });
+
+  it('shows a scanned QR payload on the check view', () => {
+    window.location.hash = '#v=1&to=Sakura+Guest+House&p=lodging&d=2026-09-09&r=7&n=K7Q2MZ4A';
+    try {
+      render(<App />);
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('いつまでか。');
+      expect(screen.getByText('この QR コードの内容')).toBeTruthy();
+      expect(screen.getByText('2026-09-16（7日以内に削除）')).toBeTruthy();
+      expect(screen.getByText('K7Q2MZ4A')).toBeTruthy();
+      // The payload must not be mistaken for a request link.
+      expect(screen.queryByText('提出先からの依頼リンクで開いています')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: /KAKKO に戻る/ }));
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('必要な情報だけ、見せる。');
+    } finally {
+      window.location.hash = '';
+    }
+  });
+
   it('opens the link builder for businesses and generates a fragment link', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: '事業者の方へ: 依頼リンクを作る' }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('受け取る。');
     fireEvent.change(screen.getByLabelText('あなたの事業者名・施設名'), { target: { value: 'Sakura Guest House' } });
-    const code = document.querySelector('.code')?.textContent ?? '';
-    expect(code).toContain('/#purpose=lodging&to=Sakura+Guest+House&keep=photo%2Cname');
+    const code = () => document.querySelector('.code')?.textContent ?? '';
+    expect(code()).toContain('/#purpose=lodging&to=Sakura+Guest+House&keep=photo%2Cname');
+    fireEvent.click(screen.getByLabelText('30日以内に削除'));
+    fireEvent.change(screen.getByLabelText('削除請求の窓口（任意）'), { target: { value: 'privacy@example.jp' } });
+    expect(code()).toContain('&retain=30&contact=privacy%40example.jp');
+    const embed = screen.getByLabelText('埋め込みコード').textContent ?? '';
+    expect(embed).toContain('/kakko.js"');
+    expect(embed).toContain('data-to="Sakura Guest House" data-purpose="lodging"');
+    expect(embed).toContain('data-retain="30"');
+    expect(embed).toContain('data-contact="privacy@example.jp"');
     fireEvent.click(screen.getByRole('button', { name: /KAKKO に戻る/ }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('必要な情報だけ、見せる。');
   });

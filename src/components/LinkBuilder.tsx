@@ -3,10 +3,12 @@ import type { PurposeId } from '../lib/types';
 import { buildRequestLink } from '../lib/link';
 import { documentFields, type FieldId } from '../rules/fields';
 import { purposeRules } from '../rules/purposeRules';
+import { RETENTION_OPTIONS, retentionLabel } from '../lib/retention';
 
 interface LinkBuilderProps {
   origin: string;
   onBack: () => void;
+  onOpenCheck: () => void;
 }
 
 const DEFAULT_KEEP: Record<PurposeId, FieldId[]> = {
@@ -21,19 +23,36 @@ const DEFAULT_KEEP: Record<PurposeId, FieldId[]> = {
  * Lets a recipient (a business) build a request link. Runs entirely in the
  * browser: nothing is registered anywhere, and the link is just text.
  */
-export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
+function attr(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+export function LinkBuilder({ origin, onBack, onOpenCheck }: LinkBuilderProps) {
   const id = useId();
   const [purpose, setPurpose] = useState<PurposeId>('lodging');
   const [customPurpose, setCustomPurpose] = useState('');
   const [recipient, setRecipient] = useState('');
   const [keep, setKeep] = useState<FieldId[]>(DEFAULT_KEEP.lodging);
+  const [retain, setRetain] = useState<number | null>(null);
+  const [contact, setContact] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
 
   const link = useMemo(
-    () => buildRequestLink(origin, { purpose, customPurpose, recipient, keep }),
-    [origin, purpose, customPurpose, recipient, keep],
+    () => buildRequestLink(origin, { purpose, customPurpose, recipient, keep, retain, contact }),
+    [origin, purpose, customPurpose, recipient, keep, retain, contact],
   );
   const snippet = `<a href="${link}">KAKKO で安全なコピーを作る</a>`;
+  const embed = [
+    `<script src="${origin.replace(/\/$/, '')}/kakko.js"`,
+    `  data-to="${attr(recipient)}" data-purpose="${purpose}"`,
+    purpose === 'other' && customPurpose.trim() ? `  data-custom="${attr(customPurpose)}"` : null,
+    keep.length > 0 ? `  data-keep="${keep.join(',')}"` : null,
+    retain === null ? null : `  data-retain="${retain}"`,
+    contact.trim() ? `  data-contact="${attr(contact)}"` : null,
+    '  defer></script>',
+  ]
+    .filter((l): l is string => l !== null)
+    .join('\n');
 
   const changePurpose = (next: PurposeId) => {
     setPurpose(next);
@@ -139,6 +158,58 @@ export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
             ))}
           </ul>
         </fieldset>
+
+        <fieldset className="fieldset">
+          <legend className="field__label">コピーの保存期間</legend>
+          <p className="field__help">
+            宣言した期限は画像の透かしと提出者の確認レシートに記録されます。守れる期間だけ宣言してください。
+          </p>
+          <div className="chips" role="radiogroup" aria-label="コピーの保存期間">
+            <label className={`chip${retain === null ? ' chip--on' : ''}`}>
+              <input
+                type="radio"
+                name={`${id}-retain`}
+                value=""
+                checked={retain === null}
+                onChange={() => setRetain(null)}
+                className="visually-hidden"
+              />
+              <span>宣言しない</span>
+            </label>
+            {RETENTION_OPTIONS.map((days) => (
+              <label key={days} className={`chip${retain === days ? ' chip--on' : ''}`}>
+                <input
+                  type="radio"
+                  name={`${id}-retain`}
+                  value={String(days)}
+                  checked={retain === days}
+                  onChange={() => setRetain(days)}
+                  className="visually-hidden"
+                />
+                <span>{retentionLabel(days)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-contact`}>
+            削除請求の窓口（任意）
+          </label>
+          <input
+            id={`${id}-contact`}
+            className="input"
+            type="text"
+            maxLength={120}
+            autoComplete="off"
+            placeholder="例: privacy@example.co.jp"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+          />
+          <span className="field__help">
+            提出者の確認レシートに記載され、期限後の削除請求はここに届きます。個人情報保護法第32条で公表が求められる窓口と同じで構いません。
+          </span>
+        </div>
       </div>
 
       <div className="builder__output">
@@ -158,7 +229,13 @@ export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
           </a>
         </div>
         <p className="status" role="status" aria-live="polite">
-          {copied === 'link' ? 'リンクをコピーしました。' : copied === 'html' ? 'HTML をコピーしました。' : ''}
+          {copied === 'link'
+            ? 'リンクをコピーしました。'
+            : copied === 'html'
+              ? 'HTML をコピーしました。'
+              : copied === 'embed'
+                ? '埋め込みコードをコピーしました。'
+                : ''}
         </p>
         <p className="field__label">HTML に貼る場合</p>
         <pre className="code" tabIndex={0}>
@@ -166,11 +243,38 @@ export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
         </pre>
       </div>
 
+      <div className="builder__output">
+        <p className="field__label">既存のアップロードフォームに 1 行足す場合</p>
+        <p className="field__help">
+          この 1 行で、ページ内のファイル入力に上のリンクが添えられ、選ばれた画像が KAKKO
+          のコピーかどうか・あなた宛てかどうか・いつまでに削除するかを<strong>閲覧者のブラウザ内で</strong>確認し、結果を
+          <code>kakko_status</code> / <code>kakko_delete_by</code> / <code>kakko_nonce</code>
+          などの hidden input として同じフォームに追加します。サーバー側の変更なしで削除期限を受け取れます。画像が KAKKO
+          に送られることはありません。
+        </p>
+        <pre className="code" tabIndex={0} aria-label="埋め込みコード">
+          {embed}
+        </pre>
+        <div className="toolbar">
+          <button type="button" className="btn btn--primary" onClick={() => copy(embed, 'embed')}>
+            埋め込みコードをコピー
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={onOpenCheck}>
+            受け取ったコピーを確認する
+          </button>
+        </div>
+        <p className="field__help">
+          特定の入力欄だけに付けたい場合は、その <code>&lt;input type="file"&gt;</code> に <code>data-kakko</code>
+          を付けてください。<code>data-require="true"</code> を足すと、あなた宛ての KAKKO
+          のコピー以外では送信できなくなります。結果は <code>kakko:verify</code> イベントでも受け取れます。
+        </p>
+      </div>
+
       <div className="builder__rules">
         <p className="field__label">受け取る側としてお願いしたいこと</p>
         <ul>
           <li>必要な項目だけをチェックしてください。多く求めるほど、提出をためらう人が増えます。</li>
-          <li>受け取ったコピーは目的が終わったら削除してください。ウォーターマークには貴社名が入っています。</li>
+          <li>受け取ったコピーは目的が終わったら削除してください。ウォーターマークには貴社名と、宣言した削除期限が入っています。</li>
           <li>重要な取引では、コピーだけに頼らず対面かビデオ通話で原本を確認してください。</li>
           <li>KAKKO は法的助言を提供しません。確認義務のある項目は所管法令で確認してください。</li>
         </ul>

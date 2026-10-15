@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MASK_COLOR, renderSafeCopy } from './render';
+import { MASK_COLOR, footerHeight, renderSafeCopy } from './render';
+import { qrMatrix } from './qr';
 import { createRecordingContext } from '../test/setup';
 import type { Mask } from './types';
 
@@ -46,6 +47,29 @@ describe('renderSafeCopy', () => {
     expect(texts.length).toBeGreaterThan(4); // tiled copies + footer
     expect(texts.every((c) => c.args[0] === watermark)).toBe(true);
     expect(ctx.calls.some((c) => c.method === 'rotate')).toBe(true);
+  });
+
+  it('appends a footer strip with the QR code below the image instead of covering it', () => {
+    const ctx = createRecordingContext();
+    const watermark = 'Sakura Guest House / 宿泊本人確認専用 / 2026-09-09';
+    const qrText = 'https://app.example.test/#v=1&to=Sakura+Guest+House&p=lodging&d=2026-09-09&r=7&n=K7Q2MZ4A';
+    renderSafeCopy(ctx, { source: fakeSource, width: 1200, height: 800, masks: [], watermark, footer: { qrText, note: '照合番号 K7Q2MZ4A' } });
+
+    const modules = qrMatrix(qrText);
+    const strip = footerHeight(1200, 800, modules.length);
+    expect(strip).toBeGreaterThan(100);
+
+    const fills = ctx.calls.filter((c) => c.method === 'fillRect');
+    // Strip background starts exactly at the bottom edge of the image area.
+    expect(fills.some((c) => c.args[0] === 0 && c.args[1] === 800 && c.args[2] === 1200 && c.args[3] === strip)).toBe(true);
+    // One small square per dark module, all inside the strip.
+    const dark = modules.flat().filter(Boolean).length;
+    const moduleFills = fills.filter((c) => (c.args[1] as number) >= 800 && c.args[2] === c.args[3] && (c.args[2] as number) <= 10);
+    expect(moduleFills).toHaveLength(dark);
+    // Nothing is drawn over the image area by the footer (no overlay band).
+    const texts = ctx.calls.filter((c) => c.method === 'fillText');
+    expect(texts.some((c) => c.args[0] === '照合番号 K7Q2MZ4A')).toBe(true);
+    expect(texts.filter((c) => c.args[0] === watermark && (c.args[2] as number) > 800)).toHaveLength(1);
   });
 
   it('does not draw any text when the watermark is empty', () => {

@@ -27,6 +27,19 @@ describe('parseRequestLink', () => {
     expect(parseRequestLink('#view=business').view).toBe('business');
   });
 
+  it('reads the retention promise and the deletion contact', () => {
+    const link = parseRequestLink('#to=X&retain=7&contact=privacy%40example.co.jp');
+    expect(link).toEqual({ recipient: 'X', keep: [], retain: 7, contact: 'privacy@example.co.jp' });
+    expect(parseRequestLink('#retain=0').retain).toBe(0);
+    expect(isRequestLink(parseRequestLink('#retain=0'))).toBe(true);
+  });
+
+  it('drops retention values that are not small non-negative integers', () => {
+    for (const bad of ['-1', '1.5', '99999', 'abc', '']) {
+      expect(parseRequestLink(`#retain=${bad}`).retain).toBeUndefined();
+    }
+  });
+
   it('keeps the custom purpose text for "other"', () => {
     expect(parseRequestLink('#purpose=other&custom=%E4%BC%9A%E5%93%A1%E7%99%BB%E9%8C%B2')).toMatchObject({
       purpose: 'other',
@@ -47,6 +60,20 @@ describe('buildRequestLink', () => {
       recipient: 'ABC 不動産',
       keep: ['photo', 'name', 'address'],
     });
+  });
+
+  it('carries retention and contact through the fragment', () => {
+    const fragment = buildRequestFragment({
+      purpose: 'lodging',
+      recipient: 'X',
+      keep: [],
+      retain: 30,
+      contact: '  privacy@example.co.jp ',
+    });
+    expect(fragment).toBe('#purpose=lodging&to=X&retain=30&contact=privacy%40example.co.jp');
+    expect(buildRequestFragment({ purpose: 'lodging', recipient: 'X', keep: [], retain: null })).toBe(
+      '#purpose=lodging&to=X',
+    );
   });
 
   it('puts everything in the fragment, never in the path or query', () => {

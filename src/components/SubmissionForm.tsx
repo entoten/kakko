@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { PurposeId, SubmissionDetails } from '../lib/types';
 import { getPurposeRule, purposeRules } from '../rules/purposeRules';
+import { RETENTION_OPTIONS, retentionLabel, retentionWatermark } from '../lib/retention';
 
 interface SubmissionFormProps {
   details: SubmissionDetails;
@@ -14,6 +15,13 @@ export function SubmissionForm({ details, onChange, warningAcknowledged, onAckno
   const rule = getPurposeRule(details.purpose);
 
   const setPurpose = (purpose: PurposeId) => onChange({ ...details, purpose });
+
+  // A deadline that arrived via a request link may not be one of the
+  // standard choices; keep it selectable.
+  const retentionChoices =
+    details.retainDays !== null && !RETENTION_OPTIONS.includes(details.retainDays)
+      ? [...RETENTION_OPTIONS, details.retainDays].sort((a, b) => a - b)
+      : RETENTION_OPTIONS;
 
   return (
     <div className="form">
@@ -113,6 +121,44 @@ export function SubmissionForm({ details, onChange, warningAcknowledged, onAckno
           onChange={(e) => onChange({ ...details, date: e.target.value })}
         />
       </div>
+
+      <fieldset className="fieldset">
+        <legend className="field__label">削除期限（提出条件）</legend>
+        <div className="chips" role="radiogroup" aria-label="削除期限">
+          <label className={`chip${details.retainDays === null ? ' chip--on' : ''}`}>
+            <input
+              type="radio"
+              name={`${id}-retain`}
+              value=""
+              checked={details.retainDays === null}
+              onChange={() => onChange({ ...details, retainDays: null })}
+              className="visually-hidden"
+            />
+            <span>指定なし</span>
+          </label>
+          {retentionChoices.map((days) => {
+            const checked = details.retainDays === days;
+            return (
+              <label key={days} className={`chip${checked ? ' chip--on' : ''}`}>
+                <input
+                  type="radio"
+                  name={`${id}-retain`}
+                  value={String(days)}
+                  checked={checked}
+                  onChange={() => onChange({ ...details, retainDays: days })}
+                  className="visually-hidden"
+                />
+                <span>{retentionLabel(days)}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="field__help">
+          {details.retainDays === null
+            ? '指定すると、期限が画像の透かしと確認レシートに刻まれます。依頼リンクで提出先が宣言した期間があれば、ここに入っています。'
+            : `透かしに「${retentionWatermark(details.retainDays, details.date)}」と刻まれます。期限を過ぎても消去されなければ、削除請求の根拠になります。`}
+        </p>
+      </fieldset>
     </div>
   );
 }

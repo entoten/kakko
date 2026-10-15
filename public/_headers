@@ -14,5 +14,13 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# kakko.js is meant to be loaded from other sites' pages (classic <script>,
+# optionally with crossorigin + integrity), so it must be readable cross-origin.
+/kakko.js
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+
 /sample/*
   Cache-Control: public, max-age=86400

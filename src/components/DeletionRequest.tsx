@@ -13,8 +13,15 @@ import {
 import { triggerDownload } from '../lib/export';
 import { todayIso } from '../lib/watermark';
 
+export interface DeletionPrefill {
+  company?: string | undefined;
+  /** Recipient's deletion contact (from a request link), used for the mailto button. */
+  email?: string | undefined;
+}
+
 interface DeletionRequestProps {
   onBack: () => void;
+  initial?: DeletionPrefill | undefined;
 }
 
 const DOCUMENT_ORDER: DocumentKind[] = ['license', 'mynumber', 'passport', 'insurance', 'residence', 'other'];
@@ -25,10 +32,13 @@ const REASON_ORDER: DeletionReason[] = ['withdrawn', 'leak', 'purposeDone'];
  * the letter is only copied, downloaded, printed or handed to the user's
  * own mail client via a mailto: link.
  */
-export function DeletionRequest({ onBack }: DeletionRequestProps) {
+export function DeletionRequest({ onBack, initial }: DeletionRequestProps) {
   const id = useId();
-  const [input, setInput] = useState<DeletionRequestInput>(() => emptyDeletionRequest(todayIso()));
-  const [email, setEmail] = useState('');
+  const [input, setInput] = useState<DeletionRequestInput>(() => ({
+    ...emptyDeletionRequest(todayIso()),
+    company: initial?.company ?? '',
+  }));
+  const [email, setEmail] = useState(initial?.email ?? '');
   const [status, setStatus] = useState<string | null>(null);
 
   const letter = useMemo(() => buildDeletionRequest(input), [input]);

@@ -49,7 +49,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['vite.config.ts', 'scripts/**/*.ts', 'eslint.config.js'],
+    files: ['vite.config.ts', 'vite.embed.config.ts', 'scripts/**/*.ts', 'eslint.config.js'],
     languageOptions: { globals: { ...globals.node } },
   },
   {

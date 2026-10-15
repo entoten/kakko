@@ -1,6 +1,9 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import type { ExportFormat, LoadedImage, Mask } from '../lib/types';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ExportFormat, LoadedImage, Mask, SubmissionDetails } from '../lib/types';
+import type { RequestLink } from '../lib/link';
 import { canShareFile, exportSafeCopy, shareResult, triggerDownload, type ExportResult } from '../lib/export';
+import { RECEIPT_FILE_NAME, buildReceipt } from '../lib/receipt';
+import { buildPayloadLink, newNonce } from '../verify/payload';
 
 interface ExportPanelProps {
   image: LoadedImage;
@@ -11,6 +14,11 @@ interface ExportPanelProps {
   onReset: () => void;
   /** Open present mode (show on screen, no file). */
   onPresent: () => void;
+  /** For the receipt. */
+  details: SubmissionDetails;
+  link: RequestLink;
+  /** Open the deletion-request generator pre-filled with this recipient. */
+  onDeletionRequest: () => void;
 }
 
 interface Generated extends ExportResult {
@@ -19,6 +27,8 @@ interface Generated extends ExportResult {
   masks: readonly Mask[];
   watermark: string;
   format: ExportFormat;
+  createdAt: Date;
+  nonce: string;
 }
 
 function formatBytes(n: number): string {
@@ -27,7 +37,17 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function ExportPanel({ image, masks, watermark, blocked, onReset, onPresent }: ExportPanelProps) {
+export function ExportPanel({
+  image,
+  masks,
+  watermark,
+  blocked,
+  onReset,
+  onPresent,
+  details,
+  link,
+  onDeletionRequest,
+}: ExportPanelProps) {
   const id = useId();
   const [format, setFormat] = useState<ExportFormat>('image/png');
   const [busy, setBusy] = useState(false);
@@ -59,7 +79,23 @@ export function ExportPanel({ image, masks, watermark, blocked, onReset, onPrese
     setError(null);
     setMessage(null);
     try {
-      const out = await exportSafeCopy({ image, masks, watermark, format });
+      const nonce = newNonce();
+      const qrText = buildPayloadLink(window.location.origin, {
+        v: 1,
+        to: details.recipient,
+        purpose: details.purpose,
+        customPurpose: details.customPurpose,
+        date: details.date,
+        ...(details.retainDays === null ? {} : { retain: details.retainDays }),
+        nonce,
+      });
+      const out = await exportSafeCopy({
+        image,
+        masks,
+        watermark,
+        format,
+        footer: { qrText, note: `KAKKO 提出用コピー ・ 照合番号 ${nonce} ・ QR で内容を確認できます` },
+      });
       if (latest.current) URL.revokeObjectURL(latest.current.previewUrl);
       const next: Generated = {
         ...out,
@@ -68,6 +104,8 @@ export function ExportPanel({ image, masks, watermark, blocked, onReset, onPrese
         masks,
         watermark,
         format,
+        createdAt: new Date(),
+        nonce,
       };
       latest.current = next;
       setGenerated(next);
@@ -94,6 +132,38 @@ export function ExportPanel({ image, masks, watermark, blocked, onReset, onPrese
       triggerDownload(result.blob, result.fileName);
       setMessage('共有できなかったため、ダウンロードに切り替えました。');
     }
+  };
+
+  const receipt = useMemo(
+    () =>
+      result
+        ? buildReceipt({
+            details,
+            link,
+            maskCount: result.masks.length,
+            watermark: result.watermark,
+            delivery: { kind: 'file', fileName: result.fileName, width: result.width, height: result.height },
+            createdAt: result.createdAt,
+            nonce: result.nonce,
+          })
+        : null,
+    [result, details, link],
+  );
+
+  const copyReceipt = async () => {
+    if (!receipt) return;
+    try {
+      await navigator.clipboard.writeText(receipt);
+      setMessage('確認レシートをコピーしました。');
+    } catch {
+      setMessage('コピーできませんでした。レシートの文面を選択してコピーしてください。');
+    }
+  };
+
+  const downloadReceipt = () => {
+    if (!receipt) return;
+    triggerDownload(new Blob([receipt], { type: 'text/plain;charset=utf-8' }), RECEIPT_FILE_NAME);
+    setMessage('確認レシートを保存しました。');
   };
 
   const disabled = busy || Boolean(blocked);
@@ -182,6 +252,27 @@ export function ExportPanel({ image, masks, watermark, blocked, onReset, onPrese
                 共有…（写真に保存など）
               </button>
             ) : null}
+          </div>
+
+          <div className="receipt">
+            <p className="field__label">確認レシート</p>
+            <p className="field__help">
+              何を・誰に・どんな条件で渡したかの控えです。画像とは別に自分の端末に残しておくと、期限後の削除請求の根拠になります。
+            </p>
+            <pre className="code" tabIndex={0} aria-label="確認レシート">
+              {receipt}
+            </pre>
+            <div className="toolbar">
+              <button type="button" className="btn btn--ghost" onClick={copyReceipt}>
+                レシートをコピー
+              </button>
+              <button type="button" className="btn btn--ghost" onClick={downloadReceipt}>
+                テキストで保存
+              </button>
+              <button type="button" className="btn btn--ghost" onClick={onDeletionRequest}>
+                削除請求文を用意する
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

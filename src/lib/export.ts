@@ -1,6 +1,7 @@
 import type { ExportFormat, LoadedImage, Mask } from './types';
 import { fitDimensions } from './image';
-import { renderSafeCopy } from './render';
+import { footerHeight, renderSafeCopy, type FooterOptions } from './render';
+import { qrMatrix } from './qr';
 import { sanitizeText } from './watermark';
 
 export interface ExportOptions {
@@ -10,6 +11,8 @@ export interface ExportOptions {
   format: ExportFormat;
   /** JPEG quality 0..1. Ignored for PNG. */
   quality?: number;
+  /** Footer strip with the QR payload; omitted only in tests of the bare pipeline. */
+  footer?: FooterOptions | undefined;
 }
 
 export interface ExportResult {
@@ -32,9 +35,10 @@ export async function exportSafeCopy(
   createCanvas: () => HTMLCanvasElement = () => document.createElement('canvas'),
 ): Promise<ExportResult> {
   const { width, height } = fitDimensions(opts.image.width, opts.image.height);
+  const strip = opts.footer ? footerHeight(width, height, qrMatrix(opts.footer.qrText).length) : 0;
   const canvas = createCanvas();
   canvas.width = width;
-  canvas.height = height;
+  canvas.height = height + strip;
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('この端末では Canvas を利用できません。');
 
@@ -44,6 +48,7 @@ export async function exportSafeCopy(
     height,
     masks: opts.masks,
     watermark: opts.watermark,
+    footer: opts.footer,
   });
 
   const blob = await canvasToBlob(canvas, opts.format, opts.quality ?? DEFAULT_JPEG_QUALITY);
@@ -52,7 +57,7 @@ export async function exportSafeCopy(
   canvas.width = 0;
   canvas.height = 0;
 
-  return { blob, width, height, fileName: buildFileName(opts.watermark, opts.format) };
+  return { blob, width, height: height + strip, fileName: buildFileName(opts.watermark, opts.format) };
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement, type: ExportFormat, quality: number): Promise<Blob> {
