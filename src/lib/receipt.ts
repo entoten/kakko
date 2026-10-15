@@ -25,6 +25,8 @@ export interface ReceiptInput {
   watermark: string;
   delivery: ReceiptDelivery;
   createdAt: Date;
+  /** Reference number stamped into the QR code of the copy. */
+  nonce?: string | undefined;
 }
 
 export const RECEIPT_FILE_NAME = 'kakko-receipt.txt';
@@ -56,6 +58,7 @@ export function buildReceipt(input: ReceiptInput): string {
     `渡し方: ${delivery}`,
     `黒塗り: ${input.maskCount} か所`,
     `透かし: ${input.watermark || '（なし）'}`,
+    ...(input.nonce ? [`照合番号: ${input.nonce}（画像の QR コードに同じ番号が入っています）`] : []),
     `削除期限（提出条件）: ${deadline}`,
     '',
   ];

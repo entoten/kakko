@@ -3,6 +3,7 @@ import type { ExportFormat, LoadedImage, Mask, SubmissionDetails } from '../lib/
 import type { RequestLink } from '../lib/link';
 import { canShareFile, exportSafeCopy, shareResult, triggerDownload, type ExportResult } from '../lib/export';
 import { RECEIPT_FILE_NAME, buildReceipt } from '../lib/receipt';
+import { buildPayloadLink, newNonce } from '../verify/payload';
 
 interface ExportPanelProps {
   image: LoadedImage;
@@ -27,6 +28,7 @@ interface Generated extends ExportResult {
   watermark: string;
   format: ExportFormat;
   createdAt: Date;
+  nonce: string;
 }
 
 function formatBytes(n: number): string {
@@ -77,7 +79,23 @@ export function ExportPanel({
     setError(null);
     setMessage(null);
     try {
-      const out = await exportSafeCopy({ image, masks, watermark, format });
+      const nonce = newNonce();
+      const qrText = buildPayloadLink(window.location.origin, {
+        v: 1,
+        to: details.recipient,
+        purpose: details.purpose,
+        customPurpose: details.customPurpose,
+        date: details.date,
+        ...(details.retainDays === null ? {} : { retain: details.retainDays }),
+        nonce,
+      });
+      const out = await exportSafeCopy({
+        image,
+        masks,
+        watermark,
+        format,
+        footer: { qrText, note: `KAKKO 提出用コピー ・ 照合番号 ${nonce} ・ QR で内容を確認できます` },
+      });
       if (latest.current) URL.revokeObjectURL(latest.current.previewUrl);
       const next: Generated = {
         ...out,
@@ -87,6 +105,7 @@ export function ExportPanel({
         watermark,
         format,
         createdAt: new Date(),
+        nonce,
       };
       latest.current = next;
       setGenerated(next);
@@ -125,6 +144,7 @@ export function ExportPanel({
             watermark: result.watermark,
             delivery: { kind: 'file', fileName: result.fileName, width: result.width, height: result.height },
             createdAt: result.createdAt,
+            nonce: result.nonce,
           })
         : null,
     [result, details, link],

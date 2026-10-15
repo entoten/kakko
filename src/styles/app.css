@@ -630,6 +630,23 @@ input[type='date'].input {
   display: grid;
   gap: var(--space-2);
 }
+.checkview__scanned {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--accent);
+  border-bottom: 1px solid var(--line);
+}
+.checkview__table {
+  margin-top: var(--space-3);
+}
+.checkview .builder__rules {
+  margin-top: var(--space-6);
+}
+.checkview .builder__rules .btn {
+  margin-top: var(--space-3);
+}
 .receipt {
   display: grid;
   gap: var(--space-2);

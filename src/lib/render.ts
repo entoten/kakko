@@ -1,5 +1,6 @@
 import type { Mask } from './types';
 import { toPixelRect } from './geometry';
+import { QR_QUIET_ZONE, qrMatrix } from './qr';
 
 /**
  * The subset of CanvasRenderingContext2D that the render pipeline uses.
@@ -22,13 +23,41 @@ export interface DrawingContext {
   globalAlpha: number;
 }
 
+export interface FooterOptions {
+  /** Text encoded in the QR code (a KAKKO link carrying the payload). */
+  qrText: string;
+  /** Second, smaller line under the watermark (reference number etc.). */
+  note: string;
+}
+
 export interface RenderOptions {
   source: CanvasImageSource;
-  /** Target size in pixels. */
+  /** Size of the image area in pixels. */
   width: number;
   height: number;
   masks: readonly Mask[];
   watermark: string;
+  /**
+   * When set, a footer strip with the watermark text and a QR code is
+   * appended *below* the image (the output is `footerHeight` taller) so
+   * nothing covers the document. Without it, a thin band is drawn over the
+   * bottom edge instead (preview and present mode).
+   */
+  footer?: FooterOptions | undefined;
+}
+
+/** Height of the appended footer strip for a given image size. */
+export function footerHeight(width: number, height: number, qrModules: number): number {
+  const { qrPx, pad } = footerMetrics(width, height, qrModules);
+  return qrPx + pad * 2;
+}
+
+function footerMetrics(width: number, height: number, qrModules: number): { scale: number; qrPx: number; pad: number; fontSize: number } {
+  const fontSize = Math.max(11, Math.round(watermarkFontSize(width, height) * 0.75));
+  const scale = Math.max(2, Math.round(Math.min(width, height) / 300));
+  const qrPx = (qrModules + QR_QUIET_ZONE * 2) * scale;
+  const pad = Math.round(fontSize * 0.6);
+  return { scale, qrPx, pad, fontSize };
 }
 
 export const MASK_COLOR = '#000000';
@@ -65,8 +94,11 @@ export function renderSafeCopy(ctx: DrawingContext, opts: RenderOptions): void {
   }
   ctx.restore();
 
-  if (watermark.trim().length > 0) {
-    drawTiledWatermark(ctx, watermark, width, height);
+  if (watermark.trim().length > 0) drawTiledWatermark(ctx, watermark, width, height);
+
+  if (opts.footer) {
+    drawFooterStrip(ctx, watermark, opts.footer, width, height);
+  } else if (watermark.trim().length > 0) {
     drawFooterBand(ctx, watermark, width, height);
   }
 }
@@ -101,6 +133,54 @@ function drawTiledWatermark(ctx: DrawingContext, text: string, width: number, he
       ctx.fillStyle = WATERMARK_COLOR;
       ctx.fillText(text, x, y);
     }
+  }
+  ctx.restore();
+}
+
+/**
+ * Appended strip: watermark text and a note on the left, QR code on the
+ * right. The QR is always black-on-white so any scanner can read it.
+ */
+function drawFooterStrip(ctx: DrawingContext, text: string, footer: FooterOptions, width: number, height: number): void {
+  const matrix = qrMatrix(footer.qrText);
+  const n = matrix.length;
+  const { scale, qrPx, pad, fontSize } = footerMetrics(width, height, n);
+  const stripHeight = qrPx + pad * 2;
+
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, height, width, stripHeight);
+
+  // QR code, right-aligned.
+  const qx = width - pad - qrPx;
+  const qy = height + pad;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(qx, qy, qrPx, qrPx);
+  ctx.fillStyle = '#000000';
+  for (let r = 0; r < n; r += 1) {
+    for (let c = 0; c < n; c += 1) {
+      if (matrix[r]?.[c]) ctx.fillRect(qx + (QR_QUIET_ZONE + c) * scale, qy + (QR_QUIET_ZONE + r) * scale, scale, scale);
+    }
+  }
+
+  // Text block, left-aligned, shrunk until it fits beside the QR.
+  const maxWidth = qx - pad * 2;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  let size = fontSize;
+  ctx.font = `600 ${size}px ${FONT_STACK}`;
+  while (size > 11 && text && ctx.measureText(text).width > maxWidth) {
+    size -= 1;
+    ctx.font = `600 ${size}px ${FONT_STACK}`;
+  }
+  if (maxWidth >= size * 4) {
+    const centerY = height + stripHeight / 2;
+    ctx.fillStyle = '#ffffff';
+    if (text) ctx.fillText(text, pad, centerY - size * 0.75);
+    ctx.globalAlpha = 0.75;
+    ctx.font = `400 ${Math.max(10, Math.round(size * 0.72))}px ${FONT_STACK}`;
+    ctx.fillText(footer.note, pad, centerY + size * 0.75);
   }
   ctx.restore();
 }

@@ -20,7 +20,9 @@ describe('buildReceipt', () => {
       watermark: 'Sakura Guest House / 宿泊本人確認専用 / 2026-09-09 / 2026-09-16までに削除',
       delivery: { kind: 'file', fileName: 'kakko-x.png', width: 1200, height: 760 },
       createdAt,
+      nonce: 'K7Q2MZ4A',
     });
+    expect(text).toContain('照合番号: K7Q2MZ4A');
     expect(text).toContain('作成: 2026-09-09 14:03:21');
     expect(text).toContain('提出先: Sakura Guest House');
     expect(text).toContain('用途: 宿泊本人確認専用');

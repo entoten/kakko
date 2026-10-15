@@ -189,6 +189,7 @@ describe('App', () => {
       expect(receipt).toContain('削除期限（提出条件）: 2026-09-16（7日以内に削除）');
       expect(receipt).toContain('黒塗り: 1 か所');
       expect(receipt).toContain('削除の窓口: privacy@example.jp');
+      expect(receipt).toMatch(/照合番号: [A-Z2-9]{8}/);
 
       fireEvent.click(screen.getByRole('button', { name: 'テキストで保存' }));
       await waitFor(() => expect(downloadSpy).toHaveBeenCalledTimes(1));
@@ -205,6 +206,23 @@ describe('App', () => {
     }
   });
 
+  it('shows a scanned QR payload on the check view', () => {
+    window.location.hash = '#v=1&to=Sakura+Guest+House&p=lodging&d=2026-09-09&r=7&n=K7Q2MZ4A';
+    try {
+      render(<App />);
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('いつまでか。');
+      expect(screen.getByText('この QR コードの内容')).toBeTruthy();
+      expect(screen.getByText('2026-09-16（7日以内に削除）')).toBeTruthy();
+      expect(screen.getByText('K7Q2MZ4A')).toBeTruthy();
+      // The payload must not be mistaken for a request link.
+      expect(screen.queryByText('提出先からの依頼リンクで開いています')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: /KAKKO に戻る/ }));
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('必要な情報だけ、見せる。');
+    } finally {
+      window.location.hash = '';
+    }
+  });
+
   it('opens the link builder for businesses and generates a fragment link', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: '事業者の方へ: 依頼リンクを作る' }));
@@ -215,6 +233,11 @@ describe('App', () => {
     fireEvent.click(screen.getByLabelText('30日以内に削除'));
     fireEvent.change(screen.getByLabelText('削除請求の窓口（任意）'), { target: { value: 'privacy@example.jp' } });
     expect(code()).toContain('&retain=30&contact=privacy%40example.jp');
+    const embed = screen.getByLabelText('埋め込みコード').textContent ?? '';
+    expect(embed).toContain('/kakko.js"');
+    expect(embed).toContain('data-to="Sakura Guest House" data-purpose="lodging"');
+    expect(embed).toContain('data-retain="30"');
+    expect(embed).toContain('data-contact="privacy@example.jp"');
     fireEvent.click(screen.getByRole('button', { name: /KAKKO に戻る/ }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('必要な情報だけ、見せる。');
   });

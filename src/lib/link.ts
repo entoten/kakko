@@ -26,7 +26,7 @@ export interface RequestLink {
   retain?: number;
   /** Where to send a deletion request (e-mail etc.). Free text, shown as-is. */
   contact?: string;
-  view?: 'business' | 'delete';
+  view?: 'business' | 'delete' | 'check';
 }
 
 export const EMPTY_LINK: RequestLink = { keep: [] };
@@ -67,7 +67,7 @@ export function parseRequestLink(hash: string): RequestLink {
   if (contact) link.contact = contact;
 
   const view = params.get('view');
-  if (view === 'business' || view === 'delete') link.view = view;
+  if (view === 'business' || view === 'delete' || view === 'check') link.view = view;
 
   return link;
 }
