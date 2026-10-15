@@ -33,6 +33,11 @@ export interface SubmissionDetails {
   recipient: string;
   /** ISO date (YYYY-MM-DD). */
   date: string;
+  /**
+   * Deadline for the recipient to delete the copy, in days after `date`
+   * (0 = right after checking). Stamped into the watermark. null = not set.
+   */
+  retainDays: number | null;
 }
 
 export type ExportFormat = 'image/png' | 'image/jpeg';

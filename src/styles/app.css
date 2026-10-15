@@ -630,6 +630,14 @@ input[type='date'].input {
   display: grid;
   gap: var(--space-2);
 }
+.receipt {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.receipt .toolbar {
+  margin-top: var(--space-1);
+}
 
 /* ---------- buttons ---------- */
 
@@ -812,6 +820,25 @@ input[type='date'].input {
   color: var(--fg-muted);
   font-size: 0.875rem;
   max-width: var(--measure);
+}
+.request__decl {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  max-width: var(--measure);
+}
+.request__decl > div {
+  display: grid;
+  grid-template-columns: 6em minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.request__decl dt {
+  color: var(--fg-muted);
+}
+.request__decl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 .request > .btn {
   justify-self: start;

@@ -3,6 +3,7 @@ import type { PurposeId } from '../lib/types';
 import { buildRequestLink } from '../lib/link';
 import { documentFields, type FieldId } from '../rules/fields';
 import { purposeRules } from '../rules/purposeRules';
+import { RETENTION_OPTIONS, retentionLabel } from '../lib/retention';
 
 interface LinkBuilderProps {
   origin: string;
@@ -27,11 +28,13 @@ export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
   const [customPurpose, setCustomPurpose] = useState('');
   const [recipient, setRecipient] = useState('');
   const [keep, setKeep] = useState<FieldId[]>(DEFAULT_KEEP.lodging);
+  const [retain, setRetain] = useState<number | null>(null);
+  const [contact, setContact] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
 
   const link = useMemo(
-    () => buildRequestLink(origin, { purpose, customPurpose, recipient, keep }),
-    [origin, purpose, customPurpose, recipient, keep],
+    () => buildRequestLink(origin, { purpose, customPurpose, recipient, keep, retain, contact }),
+    [origin, purpose, customPurpose, recipient, keep, retain, contact],
   );
   const snippet = `<a href="${link}">KAKKO で安全なコピーを作る</a>`;
 
@@ -139,6 +142,58 @@ export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
             ))}
           </ul>
         </fieldset>
+
+        <fieldset className="fieldset">
+          <legend className="field__label">コピーの保存期間</legend>
+          <p className="field__help">
+            宣言した期限は画像の透かしと提出者の確認レシートに記録されます。守れる期間だけ宣言してください。
+          </p>
+          <div className="chips" role="radiogroup" aria-label="コピーの保存期間">
+            <label className={`chip${retain === null ? ' chip--on' : ''}`}>
+              <input
+                type="radio"
+                name={`${id}-retain`}
+                value=""
+                checked={retain === null}
+                onChange={() => setRetain(null)}
+                className="visually-hidden"
+              />
+              <span>宣言しない</span>
+            </label>
+            {RETENTION_OPTIONS.map((days) => (
+              <label key={days} className={`chip${retain === days ? ' chip--on' : ''}`}>
+                <input
+                  type="radio"
+                  name={`${id}-retain`}
+                  value={String(days)}
+                  checked={retain === days}
+                  onChange={() => setRetain(days)}
+                  className="visually-hidden"
+                />
+                <span>{retentionLabel(days)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-contact`}>
+            削除請求の窓口（任意）
+          </label>
+          <input
+            id={`${id}-contact`}
+            className="input"
+            type="text"
+            maxLength={120}
+            autoComplete="off"
+            placeholder="例: privacy@example.co.jp"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+          />
+          <span className="field__help">
+            提出者の確認レシートに記載され、期限後の削除請求はここに届きます。個人情報保護法第32条で公表が求められる窓口と同じで構いません。
+          </span>
+        </div>
       </div>
 
       <div className="builder__output">
@@ -170,7 +225,7 @@ export function LinkBuilder({ origin, onBack }: LinkBuilderProps) {
         <p className="field__label">受け取る側としてお願いしたいこと</p>
         <ul>
           <li>必要な項目だけをチェックしてください。多く求めるほど、提出をためらう人が増えます。</li>
-          <li>受け取ったコピーは目的が終わったら削除してください。ウォーターマークには貴社名が入っています。</li>
+          <li>受け取ったコピーは目的が終わったら削除してください。ウォーターマークには貴社名と、宣言した削除期限が入っています。</li>
           <li>重要な取引では、コピーだけに頼らず対面かビデオ通話で原本を確認してください。</li>
           <li>KAKKO は法的助言を提供しません。確認義務のある項目は所管法令で確認してください。</li>
         </ul>

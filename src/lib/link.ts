@@ -2,13 +2,14 @@ import type { PurposeId } from './types';
 import { purposeRules } from '../rules/purposeRules';
 import { isFieldId, type FieldId } from '../rules/fields';
 import { sanitizeText } from './watermark';
+import { isRetainDays, parseRetainDays } from './retention';
 
 /**
  * Request links.
  *
  * A recipient (guest house, agency, buyer) can hand the user a link such as
  *
-  *   <kakko origin>/#purpose=lodging&to=Sakura%20Guest%20House&keep=photo,name
+ *   <kakko origin>/#purpose=lodging&to=Sakura%20Guest%20House&keep=photo,name&retain=7
  *
  * and KAKKO opens pre-filled. Everything lives in the URL *fragment* on
  * purpose: fragments are never sent to the server, so recipient names do
@@ -21,6 +22,10 @@ export interface RequestLink {
   recipient?: string;
   /** Fields the recipient says they need to see. Advisory only. */
   keep: FieldId[];
+  /** Days the recipient promises to keep the copy at most (0 = deleted right after checking). */
+  retain?: number;
+  /** Where to send a deletion request (e-mail etc.). Free text, shown as-is. */
+  contact?: string;
   view?: 'business' | 'delete';
 }
 
@@ -55,6 +60,12 @@ export function parseRequestLink(hash: string): RequestLink {
     .filter(isFieldId);
   link.keep = [...new Set(keep)];
 
+  const retain = parseRetainDays(params.get('retain'));
+  if (retain !== null) link.retain = retain;
+
+  const contact = sanitizeText(params.get('contact') ?? '', 120);
+  if (contact) link.contact = contact;
+
   const view = params.get('view');
   if (view === 'business' || view === 'delete') link.view = view;
 
@@ -63,7 +74,13 @@ export function parseRequestLink(hash: string): RequestLink {
 
 /** True when the link carries a request from a recipient (not just a view). */
 export function isRequestLink(link: RequestLink): boolean {
-  return link.purpose !== undefined || link.recipient !== undefined || link.keep.length > 0;
+  return (
+    link.purpose !== undefined ||
+    link.recipient !== undefined ||
+    link.keep.length > 0 ||
+    link.retain !== undefined ||
+    link.contact !== undefined
+  );
 }
 
 export interface RequestLinkInput {
@@ -71,6 +88,8 @@ export interface RequestLinkInput {
   customPurpose?: string;
   recipient: string;
   keep: readonly FieldId[];
+  retain?: number | null;
+  contact?: string;
 }
 
 /** Build the fragment part (including '#'). */
@@ -82,6 +101,9 @@ export function buildRequestFragment(input: RequestLinkInput): string {
   const custom = sanitizeText(input.customPurpose ?? '', 40);
   if (input.purpose === 'other' && custom) params.set('custom', custom);
   if (input.keep.length > 0) params.set('keep', [...new Set(input.keep)].join(','));
+  if (isRetainDays(input.retain)) params.set('retain', String(input.retain));
+  const contact = sanitizeText(input.contact ?? '', 120);
+  if (contact) params.set('contact', contact);
   return `#${params.toString()}`;
 }
 

@@ -1,6 +1,7 @@
 import type { RequestLink } from '../lib/link';
 import { documentFields, getField } from '../rules/fields';
 import { getPurposeRule } from '../rules/purposeRules';
+import { retentionLabel } from '../lib/retention';
 
 interface RequestPanelProps {
   link: RequestLink;
@@ -53,6 +54,24 @@ export function RequestPanel({ link, onDismiss }: RequestPanelProps) {
       ) : (
         <p className="request__body">残す項目の指定はありません。必要と思う部分だけ残してください。</p>
       )}
+
+      <div className="request__group">
+        <p className="request__label">相手の宣言</p>
+        <dl className="request__decl">
+          <div>
+            <dt>保存期間</dt>
+            <dd>
+              {link.retain !== undefined
+                ? `${retentionLabel(link.retain)}と宣言しています。期限は透かしと確認レシートに記録されます。`
+                : '宣言はありません。下の「削除期限」で、提出の条件として自分で指定できます。'}
+            </dd>
+          </div>
+          <div>
+            <dt>削除の窓口</dt>
+            <dd>{link.contact ?? '記載はありません。'}</dd>
+          </div>
+        </dl>
+      </div>
 
       <p className="request__note">
         これは相手の希望であって、何を隠すかはあなたが決めます。求められている項目が多すぎると感じたら、提出前に相手へ確認してください。

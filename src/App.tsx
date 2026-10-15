@@ -9,7 +9,7 @@ import { ExportPanel } from './components/ExportPanel';
 import { Footer } from './components/Footer';
 import { RequestPanel } from './components/RequestPanel';
 import { LinkBuilder } from './components/LinkBuilder';
-import { DeletionRequest } from './components/DeletionRequest';
+import { DeletionRequest, type DeletionPrefill } from './components/DeletionRequest';
 import { PresentMode } from './components/PresentMode';
 import { EMPTY_LINK, isRequestLink, parseRequestLink, type RequestLink } from './lib/link';
 import { initialMaskState, maskReducer } from './lib/masks';
@@ -26,7 +26,12 @@ function initialDetails(link: RequestLink): SubmissionDetails {
     customPurpose: link.customPurpose ?? '',
     recipient: link.recipient ?? '',
     date: todayIso(),
+    retainDays: link.retain ?? null,
   };
+}
+
+function looksLikeEmail(value: string | undefined): value is string {
+  return value !== undefined && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function readLink(): RequestLink {
@@ -46,6 +51,7 @@ export function App() {
   const [details, setDetails] = useState<SubmissionDetails>(() => initialDetails(link));
   const [warningAcknowledged, setWarningAcknowledged] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [deletionPrefill, setDeletionPrefill] = useState<DeletionPrefill | undefined>(undefined);
   const hasRequest = isRequestLink(link);
 
   const watermark = useMemo(() => buildWatermarkText(details), [details]);
@@ -104,7 +110,19 @@ export function App() {
   }, []);
 
   const openBusiness = useCallback(() => openView('business'), [openView]);
-  const openDeletion = useCallback(() => openView('delete'), [openView]);
+  const openDeletion = useCallback(() => {
+    setDeletionPrefill(undefined);
+    openView('delete');
+  }, [openView]);
+
+  // From the receipt: the deletion request starts with this recipient filled in.
+  const openDeletionForRecipient = useCallback(() => {
+    setDeletionPrefill({
+      company: details.recipient.trim() || undefined,
+      email: looksLikeEmail(link.contact) ? link.contact : undefined,
+    });
+    openView('delete');
+  }, [details.recipient, link.contact, openView]);
 
   const closeView = useCallback(() => {
     setView('app');
@@ -163,7 +181,7 @@ export function App() {
           {view === 'business' ? (
             <LinkBuilder origin={window.location.origin} onBack={closeView} />
           ) : (
-            <DeletionRequest onBack={closeView} />
+            <DeletionRequest key={deletionPrefill?.company ?? ''} onBack={closeView} initial={deletionPrefill} />
           )}
         </main>
         <Footer onOpenBusiness={openBusiness} onOpenDeletion={openDeletion} />
@@ -232,6 +250,9 @@ export function App() {
                 blocked={needsAcknowledgement ? '上の注意を確認してからコピーを作成できます。' : null}
                 onReset={reset}
                 onPresent={() => setPresenting(true)}
+                details={details}
+                link={link}
+                onDeletionRequest={openDeletionForRecipient}
               />
             </section>
           </div>

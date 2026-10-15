@@ -127,6 +127,7 @@ describe('no network transmission (runtime)', () => {
       customPurpose: '',
       recipient: 'Sakura Guest House',
       date: '2026-09-09',
+      retainDays: 7,
     });
 
     const result = await exportSafeCopy({ image, masks: state.masks, watermark, format: 'image/png' });
